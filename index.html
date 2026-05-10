@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MCGG Live Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #080b10;
+  --card: #0e1520;
+  --border: rgba(255,255,255,0.07);
+  --accent: #e8ff47;
+  --green: #3dffb0;
+  --red: #ff4d6d;
+  --muted: #3a4a60;
+  --text: #cdd9f0;
+  --text-dim: #5a7090;
+  --font: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+  --r: 12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.5;}
+.wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:1.5rem 1rem 5rem;}
+
+/* HEADER */
+.header{padding:2rem 0 1.5rem;text-align:center;}
+.tag{display:inline-block;font-family:var(--mono);font-size:0.62rem;letter-spacing:0.25em;color:var(--accent);border:1px solid var(--accent);padding:0.2rem 0.8rem;border-radius:2px;margin-bottom:1rem;}
+h1{font-size:2rem;font-weight:800;color:#fff;margin-bottom:0.3rem;}
+h1 span{color:var(--accent);}
+.sub{font-family:var(--mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:0.06em;}
+
+/* SETUP */
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;margin-bottom:1.2rem;}
+.setup-label{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.75rem;}
+.player-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;}
+.pinput{background:#0a111c;border:1.5px solid var(--border);border-radius:8px;color:#fff;font-family:var(--font);font-size:0.9rem;font-weight:700;padding:0.55rem 0.75rem;width:100%;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.pinput:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,255,71,0.1);}
+.pinput::placeholder{color:var(--muted);font-weight:400;}
+.me-row{display:flex;align-items:center;gap:0.6rem;margin-top:0.3rem;}
+.me-label{font-family:var(--mono);font-size:0.65rem;color:var(--accent);white-space:nowrap;letter-spacing:0.1em;}
+.me-select{flex:1;background:#0a111c;border:1.5px solid rgba(232,255,71,0.4);border-radius:8px;color:var(--accent);font-family:var(--font);font-size:0.88rem;font-weight:700;padding:0.55rem 0.75rem;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;}
+.me-select option{background:#0a111c;color:#fff;}
+
+/* SECTION TITLE */
+.section-title{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.2em;color:var(--text-dim);text-transform:uppercase;margin:1.4rem 0 0.7rem;display:flex;align-items:center;gap:0.5rem;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* RONDE LIST */
+.ronde-list{display:flex;flex-direction:column;gap:0.5rem;}
+.ronde-row{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:0.9rem 1rem;display:flex;align-items:center;gap:0.75rem;transition:all 0.2s;}
+.ronde-row.active{border-color:var(--accent);background:linear-gradient(90deg,rgba(232,255,71,0.06),transparent);}
+.ronde-row.done{border-color:rgba(61,255,176,0.2);}
+.ronde-num{font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);width:48px;flex-shrink:0;}
+.ronde-num b{display:block;font-size:1rem;color:var(--text);font-family:var(--font);font-weight:800;line-height:1.1;}
+.ronde-select{flex:1;background:transparent;border:none;color:#fff;font-family:var(--font);font-size:1rem;font-weight:700;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;}
+.ronde-select option{background:#0e1520;color:#fff;}
+.ronde-select:disabled{color:var(--muted);cursor:default;}
+.done-badge{font-family:var(--mono);font-size:0.7rem;color:var(--green);}
+
+/* ══ STATUS PANEL ══ */
+.status-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;margin-top:1.2rem;}
+.status-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.status-title-txt{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;color:var(--text-dim);text-transform:uppercase;}
+.ronde-indicator{font-family:var(--mono);font-size:0.7rem;color:var(--accent);background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.25);padding:0.15rem 0.6rem;border-radius:20px;}
+.player-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
+
+/* PS ITEM BASE */
+.ps-item{
+  border-radius:10px;padding:0.75rem 0.85rem;
+  display:flex;align-items:center;gap:0.6rem;
+  border:1.5px solid transparent;
+  transition:all 0.3s;background:#0a111c;
+  position:relative;
+}
+.ps-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:all 0.3s;}
+.ps-name{font-weight:700;font-size:0.9rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color 0.3s;}
+.ps-tag{font-family:var(--mono);font-size:0.62rem;transition:color 0.3s;white-space:nowrap;}
+
+/* STATE: sudah dilawan (normal) */
+.ps-item.sudah{border-color:rgba(61,255,176,0.15);}
+.ps-item.sudah .ps-dot{background:var(--green);}
+.ps-item.sudah .ps-name{color:var(--text);}
+.ps-item.sudah .ps-tag{color:var(--text-dim);}
+
+/* STATE: belum dilawan */
+.ps-item.belum{border-color:rgba(255,77,109,0.25);}
+.ps-item.belum .ps-dot{background:var(--red);}
+.ps-item.belum .ps-name{color:var(--text);}
+.ps-item.belum .ps-tag{color:var(--red);}
+
+/* STATE: redup (setelah ronde selesai semua, sedang preview) */
+.ps-item.dim{opacity:0.25;border-color:transparent;}
+.ps-item.dim .ps-dot{background:var(--muted);}
+.ps-item.dim .ps-name{color:var(--muted);}
+
+/* STATE: MENYALA KUNING — lawan berikutnya */
+.ps-item.next{
+  background:var(--accent);
+  border-color:var(--accent);
+  animation:glowCard 1s ease-in-out infinite;
+}
+@keyframes glowCard{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,255,71,0.5);}
+  50%{box-shadow:0 0 0 8px rgba(232,255,71,0);}
+}
+.ps-item.next .ps-dot{background:#000;}
+.ps-item.next .ps-name{color:#000;font-size:0.95rem;}
+.ps-item.next .ps-tag{color:rgba(0,0,0,0.5);font-weight:700;}
+
+/* STATE: sudah preview (dalam mode replay, sudah lewat) */
+.ps-item.preview-done{
+  border-color:rgba(232,255,71,0.2);
+  background:rgba(232,255,71,0.05);
+}
+.ps-item.preview-done .ps-dot{background:var(--accent);opacity:0.5;}
+.ps-item.preview-done .ps-name{color:rgba(232,255,71,0.5);}
+.ps-item.preview-done .ps-tag{color:rgba(232,255,71,0.4);}
+
+.legend{display:flex;gap:1rem;margin-top:0.9rem;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:0.35rem;font-family:var(--mono);font-size:0.62rem;color:var(--text-dim);}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
+
+/* ══ NEXT BANNER ══ */
+.next-banner-wrap{margin-top:1rem;}
+.next-banner-wrap.pop{animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;}
+@keyframes popIn{from{opacity:0;transform:scale(0.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+
+.next-banner{
+  background:var(--accent);border-radius:var(--r) var(--r) 0 0;
+  padding:1.3rem 1.4rem;display:flex;align-items:center;gap:1.1rem;
+  position:relative;overflow:hidden;
+}
+.next-banner::before{
+  content:'⚔';position:absolute;right:-0.5rem;top:50%;transform:translateY(-50%);
+  font-size:6rem;color:rgba(0,0,0,0.07);pointer-events:none;
+}
+.nb-icon{font-size:2.4rem;flex-shrink:0;}
+.nb-text{flex:1;}
+.nb-label{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.2em;color:rgba(0,0,0,0.45);text-transform:uppercase;margin-bottom:0.1rem;}
+.nb-name{font-size:2.2rem;font-weight:800;color:#000;line-height:1;word-break:break-all;}
+.nb-sub{font-family:var(--mono);font-size:0.63rem;color:rgba(0,0,0,0.45);margin-top:0.2rem;}
+
+.btn-next{
+  display:flex;align-items:center;justify-content:center;gap:0.7rem;
+  width:100%;background:#000;border:none;
+  color:var(--accent);font-family:var(--font);font-size:1.05rem;font-weight:800;
+  padding:1rem 1.2rem;border-radius:0 0 var(--r) var(--r);
+  cursor:pointer;letter-spacing:0.04em;transition:all 0.2s;
+}
+.btn-next:hover{background:#0d1520;letter-spacing:0.08em;}
+.btn-next:active{transform:scale(0.98);}
+.btn-arrow{font-size:1.3rem;display:inline-block;transition:transform 0.2s;}
+.btn-next:hover .btn-arrow{transform:translateX(5px);}
+
+/* RESET */
+.btn-reset{display:block;width:100%;margin-top:1.2rem;background:transparent;border:1px solid var(--muted);color:var(--text-dim);font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;padding:0.7rem;border-radius:8px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;}
+.btn-reset:hover{border-color:var(--red);color:var(--red);}
+.empty-state{text-align:center;padding:1.5rem;font-family:var(--mono);font-size:0.78rem;color:var(--muted);grid-column:1/-1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="tag">MAGIC CHESS GO GO</div>
+    <h1>LIVE <span>TRACKER</span></h1>
+    <p class="sub">catat lawan realtime · lihat siapa yang belum dilawan</p>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-label">① Isi nama 8 pemain di lobby</div>
+    <div class="player-grid" id="playerGrid"></div>
+    <div class="me-row">
+      <span class="me-label">SAYA :</span>
+      <select class="me-select" id="mySelect">
+        <option value="">— pilih nama kamu —</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="trackerSection" style="display:none">
+    <div class="section-title">② Catat lawan per ronde</div>
+    <div class="ronde-list" id="rondeList"></div>
+
+    <div class="status-panel">
+      <div class="status-header">
+        <div class="status-title-txt">Status Pemain</div>
+        <div class="ronde-indicator" id="rondeIndicator">Ronde 1</div>
+      </div>
+      <div class="player-status-grid" id="playerStatusGrid">
+        <div class="empty-state">Isi data ronde dulu...</div>
+      </div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--accent)"></div>Lawan berikutnya</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Sudah dilawan</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Belum dilawan</div>
+      </div>
+    </div>
+
+    <!-- NEXT BANNER -->
+    <div class="next-banner-wrap" id="nextBannerWrap" style="display:none">
+      <div class="next-banner">
+        <div class="nb-icon">⚔️</div>
+        <div class="nb-text">
+          <div class="nb-label">Lawan Ronde Berikutnya</div>
+          <div class="nb-name" id="nextName">—</div>
+          <div class="nb-sub" id="nextSub">—</div>
+        </div>
+      </div>
+      <button class="btn-next" onclick="handleNext()">
+        Lanjut <span class="btn-arrow">→</span>
+      </button>
+    </div>
+
+    <button class="btn-reset" onclick="resetAll()">↺ Reset / Game Baru</button>
+  </div>
+
+</div>
+<script>
+const TOTAL = 8;
+let players      = Array(TOTAL).fill('');
+let myName       = '';
+let rondeResults = []; // [{player, ronde}] ronde global 1-based
+// Mode preview: setelah semua dilawan di siklus, kita preview urutan siklus sebelumnya
+// previewIdx = index dalam siklus yang sedang "menyala" (0-based), -1 = tidak preview
+let previewIdx   = -1;
+let previewOrder = []; // urutan nama player sesuai ronde di siklus terakhir
+let prevBannerName = '';
+
+function buildGrid() {
+  const grid = document.getElementById('playerGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < TOTAL; i++) {
+    const inp = document.createElement('input');
+    inp.className = 'pinput'; inp.type = 'text';
+    inp.placeholder = `Player ${i+1}`;
+    inp.autocomplete = 'off'; inp.spellcheck = false;
+    inp.addEventListener('input', function() {
+      players[i] = this.value.trim();
+      refreshAll();
+    });
+    grid.appendChild(inp);
+  }
+}
+
+function getActive() { return players.filter(p => p !== ''); }
+
+function refreshMySelect() {
+  const sel = document.getElementById('mySelect');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— pilih nama kamu —</option>';
+  getActive().forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    if (p === prev) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+document.getElementById('mySelect').addEventListener('change', function() {
+  myName = this.value;
+  previewIdx = -1;
+  refreshAll();
+});
+
+function getOpp() { return getActive().filter(p => p !== myName); }
+
+// Jumlah lawan = n, siklus selesai tiap n ronde
+function getSiklusInfo() {
+  const opp = getOpp();
+  const n = opp.length;
+  if (!n) return { n, siklusSelesai: 0, posInSiklus: 0, siklusStart: 0 };
+  const total = rondeResults.length;
+  const siklusSelesai = Math.floor(total / n);
+  const posInSiklus   = total % n; // berapa ronde sudah di siklus saat ini
+  const siklusStart   = siklusSelesai * n; // index awal siklus saat ini
+  return { n, siklusSelesai, posInSiklus, siklusStart };
+}
+
+function getCurrentRondeGlobal() { return rondeResults.length + 1; }
+
+// ── RONDE LIST ──
+function buildRondeList() {
+  const list = document.getElementById('rondeList');
+  list.innerHTML = '';
+  const opp = getOpp();
+  const curIdx = rondeResults.length; // 0-based index ronde aktif
+  const totalShow = curIdx + 1;
+
+  for (let r = 0; r < totalShow; r++) {
+    const isDone   = r < rondeResults.length;
+    const isActive = r === curIdx;
+    const row = document.createElement('div');
+    row.className = 'ronde-row' + (isDone ? ' done' : '') + (isActive ? ' active' : '');
+
+    let selHTML = `<select class="ronde-select" data-idx="${r}" ${(!isActive && !isDone) ? 'disabled' : ''}>`;
+    selHTML += `<option value="">— pilih lawan —</option>`;
+    opp.forEach(p => {
+      selHTML += `<option value="${p}" ${(isDone && rondeResults[r]===p) ? 'selected' : ''}>${p}</option>`;
+    });
+    selHTML += `</select>`;
+
+    row.innerHTML = `
+      <div class="ronde-num"><span>Ronde</span><b>${r+1}</b></div>
+      ${selHTML}
+      ${isDone
+        ? '<div class="done-badge">✓</div>'
+        : `<div style="color:var(--${isActive?'accent':'muted'});font-size:0.85rem">${isActive?'▸':''}</div>`
+      }
+    `;
+    list.appendChild(row);
+  }
+
+  document.querySelectorAll('.ronde-select').forEach(s => {
+    s.addEventListener('change', function() {
+      const idx = parseInt(this.dataset.idx);
+      if (this.value) {
+        rondeResults = rondeResults.slice(0, idx);
+        rondeResults.push(this.value);
+        previewIdx = -1; // reset preview kalau user input manual
+      }
+      refreshAll();
+    });
+  });
+}
+
+// ── STATUS GRID ──
+function refreshStatusGrid() {
+  const grid   = document.getElementById('playerStatusGrid');
+  const banner = document.getElementById('nextBannerWrap');
+  const opp    = getOpp();
+
+  if (!opp.length) {
+    grid.innerHTML = '<div class="empty-state">Belum ada pemain...</div>';
+    banner.style.display = 'none';
+    return;
+  }
+
+  const { n, posInSiklus, siklusStart } = getSiklusInfo();
+  const curRondeGlobal = getCurrentRondeGlobal();
+  document.getElementById('rondeIndicator').textContent = `Ronde ${curRondeGlobal}`;
+
+  // Hasil di siklus saat ini
+  const hasilSiklus = rondeResults.slice(siklusStart); // sudah di siklus ini
+  const sudahSet    = new Set(hasilSiklus);
+  const belumArr    = opp.filter(p => !sudahSet.has(p));
+
+  // ── MODE A: Masih dalam siklus (belum semua dilawan) ──
+  if (posInSiklus > 0 || rondeResults.length === 0) {
+    previewIdx = -1;
+
+    // Cek apakah tinggal 1 yang belum
+    const isNextSingle = belumArr.length === 1;
+    const nextPlayer   = isNextSingle ? belumArr[0] : '';
+
+    grid.innerHTML = '';
+    opp.forEach(p => {
+      const isSudah = sudahSet.has(p);
+      const isNext  = p === nextPlayer;
+      const item    = document.createElement('div');
+
+      if (isNext) item.className = 'ps-item next';
+      else if (isSudah) item.className = 'ps-item sudah';
+      else item.className = 'ps-item belum';
+
+      let tag = '';
+      if (isSudah) {
+        const idx = rondeResults.findIndex((r, i) => i >= siklusStart && r === p);
+        tag = `R${idx+1}`;
+      } else if (isNext) tag = '⚔ NEXT';
+      else tag = 'belum';
+
+      item.innerHTML = `<div class="ps-dot"></div><div class="ps-name">${p}</div><div class="ps-tag">${tag}</div>`;
+      grid.appendChild(item);
+    });
+
+    showBanner(nextPlayer, `Satu-satunya yang belum dilawan · Ronde ${curRondeGlobal}`, isNextSingle);
+    return;
+  }
+
+  // ── MODE B: Siklus baru saja selesai (posInSiklus === 0 && rondeResults.length > 0) ──
+  // Semua sudah dilawan di siklus sebelumnya
+  // Ambil urutan siklus terakhir yang selesai
+  const lastSiklusStart = siklusStart - n;
+  previewOrder = rondeResults.slice(lastSiklusStart, lastSiklusStart + n);
+
+  // Kalau previewIdx belum diinit, mulai dari 0
+  if (previewIdx < 0) previewIdx = 0;
+
+  // Map player -> ronde dalam siklus terakhir
+  const rondeMap = {};
+  previewOrder.forEach((p, i) => { rondeMap[p] = lastSiklusStart + i + 1; });
+
+  grid.innerHTML = '';
+  opp.forEach(p => {
+    const orderIdx = previewOrder.indexOf(p); // posisi dalam siklus terakhir (0-based)
+    const item = document.createElement('div');
+
+    if (orderIdx === previewIdx) {
+      // Menyala kuning — ini yang sedang di-highlight
+      item.className = 'ps-item next';
+    } else if (orderIdx < previewIdx) {
+      // Sudah lewat di preview
+      item.className = 'ps-item preview-done';
+    } else {
+      // Belum sampai di preview — redup
+      item.className = 'ps-item dim';
+    }
+
+    const tag = `R${rondeMap[p]}`;
+    item.innerHTML = `<div class="ps-dot"></div><div class="ps-name">${p}</div><div class="ps-tag">${tag}</div>`;
+    grid.appendChild(item);
+  });
+
+  // Banner menampilkan siapa yang sedang menyala
+  const currentHighlight = previewOrder[previewIdx];
+  const rondeHighlight   = rondeMap[currentHighlight];
+  showBanner(currentHighlight, `Dilawan di R${rondeHighlight} · Tekan Lanjut untuk melihat berikutnya`, true);
+}
+
+function showBanner(name, sub, visible) {
+  const bannerWrap = document.getElementById('nextBannerWrap');
+  if (!visible || !name) {
+    bannerWrap.style.display = 'none';
+    return;
+  }
+  if (name !== prevBannerName) {
+    prevBannerName = name;
+    bannerWrap.style.display = 'none';
+    void bannerWrap.offsetWidth;
+    bannerWrap.classList.remove('pop');
+    void bannerWrap.offsetWidth;
+    bannerWrap.classList.add('pop');
+    bannerWrap.style.display = 'block';
+  } else {
+    bannerWrap.style.display = 'block';
+  }
+  document.getElementById('nextName').textContent = name;
+  document.getElementById('nextSub').textContent  = sub;
+}
+
+// ── HANDLE NEXT BUTTON ──
+function handleNext() {
+  const { n, posInSiklus } = getSiklusInfo();
+  const opp = getOpp();
+
+  // Mode A: tinggal 1 belum dilawan → auto isi dan lanjut ronde
+  if (posInSiklus > 0 || rondeResults.length === 0) {
+    const { siklusStart } = getSiklusInfo();
+    const hasilSiklus = rondeResults.slice(siklusStart);
+    const sudahSet    = new Set(hasilSiklus);
+    const belumArr    = opp.filter(p => !sudahSet.has(p));
+    if (belumArr.length === 1) {
+      rondeResults.push(belumArr[0]);
+      previewIdx = -1;
+      refreshAll();
+      setTimeout(() => {
+        const active = document.querySelector('.ronde-row.active');
+        if (active) active.scrollIntoView({ behavior:'smooth', block:'center' });
+      }, 120);
+    }
+    return;
+  }
+
+  // Mode B: preview siklus terakhir → geser highlight ke berikutnya
+  if (previewIdx < previewOrder.length - 1) {
+    previewIdx++;
+    prevBannerName = ''; // force re-animate
+    refreshStatusGrid();
+  } else {
+    // Sudah sampai akhir preview → mulai siklus baru (ronde aktif sudah siap)
+    previewIdx = -1;
+    prevBannerName = '';
+    refreshAll();
+  }
+}
+
+// ── REFRESH ALL ──
+function refreshAll() {
+  refreshMySelect();
+  const show = myName && getActive().length >= 2;
+  document.getElementById('trackerSection').style.display = show ? 'block' : 'none';
+  if (show) {
+    buildRondeList();
+    refreshStatusGrid();
+  }
+}
+
+// ── RESET ──
+function resetAll() {
+  rondeResults = []; players = Array(TOTAL).fill('');
+  myName = ''; previewIdx = -1; previewOrder = []; prevBannerName = '';
+  document.querySelectorAll('.pinput').forEach((inp, i) => { inp.value = ''; players[i] = ''; });
+  document.getElementById('mySelect').value = '';
+  refreshAll();
+}
+
+buildGrid();
+refreshAll();
+</script>
+</body>
+</html>
